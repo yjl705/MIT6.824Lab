@@ -150,6 +150,7 @@ func (cfg *config) checkLogs(i int, m ApplyMsg) (string, bool) {
 	}
 	_, prevok := cfg.logs[i][m.CommandIndex-1]
 	cfg.logs[i][m.CommandIndex] = v
+	fmt.Printf("Record i %v and commandIndex %v with Command %v\n", i, m.CommandIndex, v)
 	if m.CommandIndex > cfg.maxIndex {
 		cfg.maxIndex = m.CommandIndex
 	}
@@ -164,6 +165,7 @@ func (cfg *config) applier(i int, applyCh chan ApplyMsg) {
 			// ignore other types of ApplyMsg
 		} else {
 			cfg.mu.Lock()
+			fmt.Printf("Command in channel is %v\n", m.Command)
 			err_msg, prevok := cfg.checkLogs(i, m)
 			cfg.mu.Unlock()
 			if m.CommandIndex > 1 && prevok == false {
@@ -478,6 +480,7 @@ func (cfg *config) checkNoLeader() {
 		if cfg.connected[i] {
 			_, is_leader := cfg.rafts[i].GetState()
 			if is_leader {
+				//fmt.Printf("expected no leader among connected servers, but %v claims to be leader", i)
 				cfg.t.Fatalf("expected no leader among connected servers, but %v claims to be leader", i)
 			}
 		}
@@ -486,6 +489,7 @@ func (cfg *config) checkNoLeader() {
 
 // how many servers think a log entry is committed?
 func (cfg *config) nCommitted(index int) (int, interface{}) {
+	//fmt.Printf("Index for nCommitted is %v\n", index)
 	count := 0
 	var cmd interface{} = nil
 	for i := 0; i < len(cfg.rafts); i++ {
@@ -495,6 +499,7 @@ func (cfg *config) nCommitted(index int) (int, interface{}) {
 
 		cfg.mu.Lock()
 		cmd1, ok := cfg.logs[i][index]
+		//fmt.Printf("cmd is %v, ok is %v\n", cmd1, ok)
 		cfg.mu.Unlock()
 
 		if ok {
@@ -504,6 +509,7 @@ func (cfg *config) nCommitted(index int) (int, interface{}) {
 			}
 			count += 1
 			cmd = cmd1
+			fmt.Printf("Successful cmd is %v\n", cmd)
 		}
 	}
 	return count, cmd
@@ -569,6 +575,7 @@ func (cfg *config) one(cmd interface{}, expectedServers int, retry bool) int {
 			if rf != nil {
 				index1, _, ok := rf.Start(cmd)
 				if ok {
+					fmt.Printf("Get success response with index %v \n", index1)
 					index = index1
 					break
 				}
@@ -580,7 +587,12 @@ func (cfg *config) one(cmd interface{}, expectedServers int, retry bool) int {
 			// submitted our command; wait a while for agreement.
 			t1 := time.Now()
 			for time.Since(t1).Seconds() < 2 {
+				//fmt.Printf("Test index %v \n", index)
 				nd, cmd1 := cfg.nCommitted(index)
+				if nd != 0 {
+					fmt.Printf("nd is %v and cmd1 is %v\n", nd, cmd1)
+				}
+
 				if nd > 0 && nd >= expectedServers {
 					// committed
 					if cmd1 == cmd {
@@ -597,6 +609,7 @@ func (cfg *config) one(cmd interface{}, expectedServers int, retry bool) int {
 			time.Sleep(50 * time.Millisecond)
 		}
 	}
+	fmt.Printf("Last step!\n")
 	if cfg.checkFinished() == false {
 		cfg.t.Fatalf("one(%v) failed to reach agreement", cmd)
 	}

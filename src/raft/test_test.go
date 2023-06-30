@@ -8,7 +8,9 @@ package raft
 // test with the original before submitting.
 //
 
-import "testing"
+import (
+	"testing"
+)
 import "fmt"
 import "time"
 import "math/rand"
@@ -51,6 +53,7 @@ func TestInitialElection2A(t *testing.T) {
 }
 
 func TestReElection2A(t *testing.T) {
+	//return
 	servers := 3
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -91,6 +94,7 @@ func TestReElection2A(t *testing.T) {
 }
 
 func TestManyElections2A(t *testing.T) {
+	//return
 	servers := 7
 	cfg := make_config(t, servers, false, false)
 	defer cfg.cleanup()
@@ -133,11 +137,13 @@ func TestBasicAgree2B(t *testing.T) {
 	iters := 3
 	for index := 1; index < iters+1; index++ {
 		nd, _ := cfg.nCommitted(index)
+		fmt.Printf("Pass nCommitted with index %v\n", index)
 		if nd > 0 {
 			t.Fatalf("some have committed before Start()")
 		}
 
 		xindex := cfg.one(index*100, servers, false)
+		fmt.Printf("Pass one with index %v\n", index)
 		if xindex != index {
 			t.Fatalf("got index %v but expected %v", xindex, index)
 		}
